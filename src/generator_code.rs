@@ -1,15 +1,15 @@
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use anyhow::Result;
 use opentype::Font;
 use opentype::truetype::{CharMapping, PostScript};
 use opentype::truetype::char_mapping::Encoding;
 
 
-
-pub fn generate(font_path: &str) -> Result<bool> {
-    let mut reader = File::open(font_path)?;
+pub fn generate(font_path: &str, output_path: &str, file_name: String) -> Result<bool> {
+    let path = Path::new(font_path);
+    let mut reader = File::open(path)?;
     let font = Font::read(&mut reader)?;
     let data: PostScript = font.take(&mut reader)?.unwrap();
     let mut names = Vec::new();
@@ -19,9 +19,14 @@ pub fn generate(font_path: &str) -> Result<bool> {
     }else{
         return Ok(false);
     }
-    let cs_path = Path::new(r#"F:\ttf\FontAwesomeIcon.cs"#);
+
+    let mut cs_path = PathBuf::new();
+    cs_path.push(output_path);
+    cs_path.push(format!("{0}.cs", file_name.as_str()));
+    println!("{:?}", cs_path);
+    // let mut file = File::create(cs_path)?;
     let mut file = File::create(cs_path)?;
-    file.write("public enum FontAwesomeIcon {\r\n".as_bytes());
+    file.write(format!(r#"public enum {0} {{{1}"#, file_name, "\r\n").as_bytes());
     let data: CharMapping = font.take(&mut reader)?.unwrap();
 
     for i in data.encodings {
@@ -49,6 +54,7 @@ pub fn generate(font_path: &str) -> Result<bool> {
             }
         }
     }
+
     file.write("}".as_bytes());
     file.flush()?;
     Ok(true)
