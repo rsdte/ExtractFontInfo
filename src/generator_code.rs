@@ -5,6 +5,7 @@ use anyhow::Result;
 use opentype::Font;
 use opentype::truetype::{CharMapping, PostScript};
 use opentype::truetype::char_mapping::Encoding;
+use regex::Regex;
 
 
 pub fn generate(font_path: &str, output_path: &str, file_name: String) -> Result<bool> {
@@ -28,7 +29,7 @@ pub fn generate(font_path: &str, output_path: &str, file_name: String) -> Result
     let mut file = File::create(cs_path)?;
     file.write(format!(r#"public enum {0} {{{1}"#, file_name, "\r\n").as_bytes())?;
     let data: CharMapping = font.take(&mut reader)?.unwrap();
-
+    let regex = Regex::new(r#"^\d"#)?;
     for i in data.encodings {
         if let Encoding::Format4(ref enc) = i {
             let map = enc.mapping();
@@ -36,19 +37,29 @@ pub fn generate(font_path: &str, output_path: &str, file_name: String) -> Result
                 let index = m.1 as usize;
                 if index < names.len() {
                     let name = &names[index];
-                    if !name.starts_with("_") || !name.starts_with("-") {
+                    if name.contains("-") || name.contains("_") {
+                        // 包含 ’-‘、’_‘ 的名称去掉转驼峰命名
                         let split = if name.contains("-") {
                             '-'
                         } else {
                             '_'
                         };
                         let k = name.split(split).map(|x| to_first_upper(x).unwrap()).collect::<Vec<String>>();
-                        let enum_name = k.join("");
+                        let mut enum_name = k.join("");
+                        if regex.is_match(enum_name.as_str()){
+                            // 如果是数字开头就加上 '_'
+                            enum_name.insert(0, '_');
+                        }
                         file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, enum_name, name).as_bytes())?;
                         file.write(format!("\r\n    {0} = {1:#x},\r\n", enum_name, m.0).as_bytes())?;
                     } else {
-                        file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, name, name).as_bytes())?;
-                        file.write(format!("\r\n    {0} = {1:#x},\r\n", name, m.0).as_bytes())?;
+                        let mut enum_name = to_first_upper(name.as_str()).unwrap();
+                        if regex.is_match(enum_name.as_str()){
+                            // 如果是数字开头就加上 '_'
+                            enum_name.insert(0, '_');
+                        }
+                        file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, enum_name, name).as_bytes())?;
+                        file.write(format!("\r\n    {0} = {1:#x},\r\n", enum_name , m.0).as_bytes())?;
                     }
                 }
             }
