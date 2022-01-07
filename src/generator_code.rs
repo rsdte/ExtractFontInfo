@@ -26,7 +26,7 @@ pub fn generate(font_path: &str, output_path: &str, file_name: String) -> Result
     println!("{:?}", cs_path);
     // let mut file = File::create(cs_path)?;
     let mut file = File::create(cs_path)?;
-    file.write(format!(r#"public enum {0} {{{1}"#, file_name, "\r\n").as_bytes());
+    file.write(format!(r#"public enum {0} {{{1}"#, file_name, "\r\n").as_bytes())?;
     let data: CharMapping = font.take(&mut reader)?.unwrap();
 
     for i in data.encodings {
@@ -44,18 +44,18 @@ pub fn generate(font_path: &str, output_path: &str, file_name: String) -> Result
                         };
                         let k = name.split(split).map(|x| to_first_upper(x).unwrap()).collect::<Vec<String>>();
                         let enum_name = k.join("");
-                        file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, enum_name, name).as_bytes());
-                        file.write(format!("\r\n    {0} = {1:#x},\r\n", enum_name, m.0).as_bytes());
+                        file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, enum_name, name).as_bytes())?;
+                        file.write(format!("\r\n    {0} = {1:#x},\r\n", enum_name, m.0).as_bytes())?;
                     } else {
-                        file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, name, name).as_bytes());
-                        file.write(format!("\r\n    {0} = {1:#x},\r\n", name, m.0).as_bytes());
+                        file.write(format!(r#"    [Description("{0}"),IconId("{1}")]"#, name, name).as_bytes())?;
+                        file.write(format!("\r\n    {0} = {1:#x},\r\n", name, m.0).as_bytes())?;
                     }
                 }
             }
         }
     }
 
-    file.write("}".as_bytes());
+    file.write("}".as_bytes())?;
     file.flush()?;
     Ok(true)
 }
